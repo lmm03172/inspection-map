@@ -871,13 +871,8 @@ function addMarker(item, idx) {
   div.appendChild(dot);
   div.appendChild(label);
 
-  let touchMoved = false;
-  div.addEventListener('touchstart', (e) => { touchMoved = false; }, { passive: true });
-  div.addEventListener('touchmove', () => { touchMoved = true; }, { passive: true });
-  div.addEventListener('touchend', (e) => {
-    if (!touchMoved) { e.preventDefault(); openPopup(idx); }
-  });
-  div.addEventListener('click', () => openPopup(idx));
+  div.setAttribute('onclick', `openPopup(${idx})`);
+  div.style.pointerEvents = 'auto';
 
   const overlay = new kakao.maps.CustomOverlay({
     position: pos,
