@@ -571,6 +571,7 @@
     <div class="popup-btns">
       <button class="btn btn-success" id="popupDoneBtn" onclick="markDone()">✅ 방문 완료</button>
       <button class="btn btn-outline" onclick="openRoadview()">🔭 로드뷰 보기</button>
+      <div id="popupInjuList" style="display:none; margin-bottom:4px;"></div>
       <button class="btn" id="popupElecBtn" style="background:#fff3e0; color:#e65100; border:1.5px solid #e65100; display:none;">⚡ ElecMap 인입주 찾기</button>
       <button class="btn btn-danger" onclick="deletePin()">🗑️ 핀 삭제</button>
       <button class="btn" style="background:var(--bg); color:var(--text-sub);" onclick="closePopup()">닫기</button>
@@ -611,6 +612,15 @@ function toggleMapType() {
     btn.style.background = 'white';
     btn.textContent = '🛰️';
   }
+}
+
+function openElecMap(injuNo) {
+  navigator.clipboard.writeText(injuNo).then(() => {
+    showToast(`⚡ ${injuNo} 복사됨! ElecMap에 붙여넣기 하세요`);
+  }).catch(() => {
+    showToast(`⚡ 인입주 번호: ${injuNo}`);
+  });
+  setTimeout(() => window.open('https://elecmap.kr/search', '_blank'), 500);
 }
 
 function toggleSearch() {
@@ -713,10 +723,9 @@ function handleExcelUpload(input) {
 
       const cell0 = String(row[0] || '').trim();
       const cell1 = String(row[1] || '').trim();
-
-      // 전체 주소인지 번지만인지 판단
-      const isFullAddr = cell0.includes('도') || cell0.includes('시') || cell0.includes('군') || cell0.includes('읍') || cell0.includes('면') || cell0.includes('리');
       const cell2 = String(row[2] || '').trim();
+
+      const isFullAddr = cell0.includes('도') || cell0.includes('시') || cell0.includes('군') || cell0.includes('읍') || cell0.includes('면') || cell0.includes('리');
 
       let injuNo = '';
 
@@ -736,7 +745,25 @@ function handleExcelUpload(input) {
         addr = getFullAddr(bunji);
       }
 
-      if (bunji) parsed.push({ name, bunji, addr, injuNo, done: false });
+      if (!bunji) return;
+
+      // 같은 주소가 이미 있으면 인입주 번호만 추가
+      const existing = parsed.find(p => p.addr === addr);
+      if (existing) {
+        if (injuNo && !existing.injuList.includes(injuNo)) {
+          existing.injuList.push(injuNo);
+          existing.totalCount = (existing.totalCount || 1) + 1;
+        }
+      } else {
+        parsed.push({ 
+          name, bunji, addr, 
+          injuNo, 
+          injuList: injuNo ? [injuNo] : [],
+          totalCount: 1,
+          doneCount: 0,
+          done: false 
+        });
+      }
     });
 
     if (parsed.length === 0) { showToast('데이터를 읽을 수 없습니다'); return; }
@@ -905,21 +932,25 @@ function openPopup(idx) {
   document.getElementById('popupAddr').textContent = addrText;
   document.getElementById('popupAddr').style.whiteSpace = 'pre-line';
 
-  // ElecMap 버튼 표시/숨김
+  // 인입주 목록 표시
   const elecBtn = document.getElementById('popupElecBtn');
-  if (elecBtn) {
-    if (item.injuNo) {
-      elecBtn.style.display = 'block';
-      elecBtn.onclick = () => {
-        navigator.clipboard.writeText(item.injuNo).then(() => {
-          showToast(`⚡ ${item.injuNo} 복사됨! ElecMap에 붙여넣기 하세요`);
-        }).catch(() => {
-          showToast(`⚡ 인입주 번호: ${item.injuNo}`);
-        });
-        setTimeout(() => window.open('https://elecmap.kr/search', '_blank'), 500);
-      };
+  if (elecBtn) elecBtn.style.display = 'none';
+  
+  const injuContainer = document.getElementById('popupInjuList');
+  if (injuContainer) {
+    if (item.injuList && item.injuList.length > 0) {
+      injuContainer.style.display = 'block';
+      injuContainer.innerHTML = `
+        <div style="font-size:12px; font-weight:700; color:#e65100; margin-bottom:6px;">⚡ 인입주 번호 (${item.injuList.length}개)</div>
+        ${item.injuList.map(no => `
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 8px; background:#fff3e0; border-radius:8px; margin-bottom:4px;">
+            <span style="font-size:13px; font-weight:600; color:#bf360c;">${no}</span>
+            <button onclick="openElecMap('${no}')" style="background:#e65100; color:white; border:none; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer;">찾기</button>
+          </div>
+        `).join('')}
+      `;
     } else {
-      elecBtn.style.display = 'none';
+      injuContainer.style.display = 'none';
     }
   }
 
