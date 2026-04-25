@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>점검지도</title>
-<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=f34c8ba14f5b02f2a0c69ec56e1ed5e8&libraries=services"></script>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=f34c8ba14f5b02f2a0c69ec56e1ed5e8&libraries=services,drawing,clusterer"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   
@@ -711,6 +711,45 @@ function initMap() {
     level: 7
   };
   map = new kakao.maps.Map(container, options);
+
+  // 두 손가락 회전 직접 구현
+  let startAngle = null;
+  let currentRotation = 0;
+
+  const mapDiv = document.getElementById('map');
+
+  mapDiv.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[1].clientX - e.touches[0].clientX;
+      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      startAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+    }
+  }, { passive: true });
+
+  mapDiv.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && startAngle !== null) {
+      const dx = e.touches[1].clientX - e.touches[0].clientX;
+      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      const diff = angle - startAngle;
+      currentRotation += diff;
+      startAngle = angle;
+
+      // 카카오맵 회전 적용
+      if (map.setAngle) {
+        map.setAngle(currentRotation);
+      } else {
+        // 지도 컨테이너 직접 회전
+        const canvas = mapDiv.querySelector('canvas');
+        if (canvas) canvas.style.transform = `rotate(${currentRotation}deg)`;
+        else mapDiv.style.transform = `rotate(${currentRotation}deg)`;
+      }
+    }
+  }, { passive: true });
+
+  mapDiv.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) startAngle = null;
+  }, { passive: true });
   geocoder = new kakao.maps.services.Geocoder();
   
   if (data.length > 0) plotAllMarkers();
