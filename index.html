@@ -440,14 +440,18 @@
   <!-- Map Page -->
   <div class="page active" id="page-map">
     <div style="position:relative; flex:1; display:flex; flex-direction:column;">
-      <div class="map-controls">
-        <input class="search-box" type="text" placeholder="🔍 업체명 또는 주소 검색" id="searchInput" oninput="filterMarkers(this.value)">
-        <button class="map-btn" onclick="moveToMyLocation()" title="내 위치">📍</button>
-      </div>
       <div id="map" style="flex:1;"></div>
+      <div id="searchBar" style="display:none; position:absolute; top:8px; left:8px; right:52px; z-index:10;">
+        <input class="search-box" type="text" placeholder="🔍 업체명 또는 주소 검색" id="searchInput" oninput="filterMarkers(this.value)">
+      </div>
+      <div style="position:absolute; top:8px; right:8px; z-index:10; display:flex; flex-direction:column; gap:8px;">
+        <button class="map-btn" onclick="toggleSearch()">🔍</button>
+        <button class="map-btn" onclick="moveToMyLocation()">📍</button>
+        <button class="map-btn" onclick="toggleSheet()">📋</button>
+      </div>
     </div>
-    <div class="bottom-sheet" id="bottomSheet">
-      <div class="sheet-handle"></div>
+    <div class="bottom-sheet" id="bottomSheet" style="display:none;">
+      <div class="sheet-handle" onclick="toggleSheet()" style="cursor:pointer;"></div>
       <div class="sheet-title">
         <span>오늘 점검 목록</span>
         <span id="listCount" style="color:var(--text-sub); font-weight:400; font-size:12px;"></span>
@@ -574,6 +578,18 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
+
+function toggleSearch() {
+  const bar = document.getElementById('searchBar');
+  bar.style.display = bar.style.display === 'none' ? 'block' : 'none';
+  if (bar.style.display === 'block') document.getElementById('searchInput').focus();
+}
+
+function toggleSheet() {
+  const sheet = document.getElementById('bottomSheet');
+  sheet.style.display = sheet.style.display === 'none' ? 'block' : 'none';
+}
+
 // ===== STATE =====
 let map = null;
 let markers = [];
