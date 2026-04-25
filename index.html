@@ -838,18 +838,46 @@ function addMarker(item, idx) {
   
   const div = document.createElement('div');
   div.style.cssText = `
-    width: 14px;
-    height: 14px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  `;
+
+  const dot = document.createElement('div');
+  dot.style.cssText = `
+    width: 16px;
+    height: 16px;
     background: ${color};
     border: 2px solid white;
     border-radius: 50%;
     box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-    cursor: pointer;
-    transition: transform 0.15s;
+    flex-shrink: 0;
   `;
+
+  const label = document.createElement('div');
+  label.style.cssText = `
+    background: ${color};
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 6px;
+    white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  `;
+  label.textContent = item.bunji || '';
+
+  div.appendChild(dot);
+  div.appendChild(label);
+
+  let touchMoved = false;
+  div.addEventListener('touchstart', (e) => { touchMoved = false; }, { passive: true });
+  div.addEventListener('touchmove', () => { touchMoved = true; }, { passive: true });
+  div.addEventListener('touchend', (e) => {
+    if (!touchMoved) { e.preventDefault(); openPopup(idx); }
+  });
   div.addEventListener('click', () => openPopup(idx));
-  div.addEventListener('touchstart', () => div.style.transform = 'scale(1.5)');
-  div.addEventListener('touchend', () => { div.style.transform = 'scale(1)'; openPopup(idx); });
 
   const overlay = new kakao.maps.CustomOverlay({
     position: pos,
