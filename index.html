@@ -571,6 +571,7 @@
     <div class="popup-btns">
       <button class="btn btn-success" id="popupDoneBtn" onclick="markDone()">✅ 방문 완료</button>
       <button class="btn btn-outline" onclick="openRoadview()">🔭 로드뷰 보기</button>
+      <button class="btn" id="popupElecBtn" style="background:#fff3e0; color:#e65100; border:1.5px solid #e65100; display:none;">⚡ ElecMap 인입주 찾기</button>
       <button class="btn btn-danger" onclick="deletePin()">🗑️ 핀 삭제</button>
       <button class="btn" style="background:var(--bg); color:var(--text-sub);" onclick="closePopup()">닫기</button>
     </div>
@@ -839,7 +840,10 @@ function addMarker(item, idx) {
   // 기본 마커로 클릭 이벤트 처리
   const marker = new kakao.maps.Marker({ position: pos, zIndex: 3 });
   marker.setMap(map);
-  kakao.maps.event.addListener(marker, 'click', () => openPopup(idx));
+  kakao.maps.event.addListener(marker, 'click', function() { 
+    console.log('marker clicked', idx);
+    openPopup(idx); 
+  });
 
   // 라벨은 별도 CustomOverlay로 (클릭 안 됨 - 마커가 처리)
   const labelDiv = document.createElement('div');
@@ -888,6 +892,8 @@ function updateMarker(idx) {
 
 // ===== POPUP =====
 function openPopup(idx) {
+  console.log('openPopup called', idx);
+  if (!data[idx]) { console.log('data not found'); return; }
   selectedIdx = idx;
   const item = data[idx];
   document.getElementById('popupTitle').textContent = item.name || `번지: ${item.bunji}`;
