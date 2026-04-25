@@ -836,34 +836,43 @@ function addMarker(item, idx) {
   const pos = new kakao.maps.LatLng(item.lat, item.lng);
   const color = item.done ? '#2e7d32' : '#e53935';
 
-  // 카카오 기본 마커 사용 (클릭 이벤트 가장 안정적)
-  const markerImage = new kakao.maps.MarkerImage(
-    `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="60" height="24">
-        <circle cx="10" cy="12" r="8" fill="${color}" stroke="white" stroke-width="2"/>
-        <rect x="20" y="4" width="38" height="16" rx="6" fill="${color}"/>
-        <text x="39" y="15" font-size="9" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial">${item.bunji||''}</text>
-      </svg>
-    `)}`,
-    new kakao.maps.Size(60, 24),
-    { offset: new kakao.maps.Point(10, 12) }
-  );
-
-  const marker = new kakao.maps.Marker({
-    position: pos,
-    image: markerImage,
-    zIndex: 3
-  });
+  // 기본 마커로 클릭 이벤트 처리
+  const marker = new kakao.maps.Marker({ position: pos, zIndex: 3 });
   marker.setMap(map);
-
   kakao.maps.event.addListener(marker, 'click', () => openPopup(idx));
 
-  markers.push({ overlay: marker, clickOverlay: marker, idx });
+  // 라벨은 별도 CustomOverlay로 (클릭 안 됨 - 마커가 처리)
+  const labelDiv = document.createElement('div');
+  labelDiv.style.cssText = `
+    background: ${color};
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    margin-left: 18px;
+    margin-top: -8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  `;
+  labelDiv.textContent = item.bunji || '';
+
+  const labelOverlay = new kakao.maps.CustomOverlay({
+    position: pos,
+    content: labelDiv,
+    yAnchor: 0.5,
+    zIndex: 2
+  });
+  labelOverlay.setMap(map);
+
+  markers.push({ overlay: marker, labelOverlay, clickOverlay: marker, idx });
 }
 
 function clearMarkers() {
   markers.forEach(m => { 
     m.overlay.setMap(null);
+    if (m.labelOverlay) m.labelOverlay.setMap(null);
   });
   markers = [];
 }
@@ -872,6 +881,7 @@ function updateMarker(idx) {
   const m = markers.find(m => m.idx === idx);
   if (!m) return;
   m.overlay.setMap(null);
+  if (m.labelOverlay) m.labelOverlay.setMap(null);
   markers = markers.filter(x => x.idx !== idx);
   if (data[idx]) addMarker(data[idx], idx);
 }
