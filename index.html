@@ -443,8 +443,9 @@
   <div class="page active" id="page-map">
     <div style="position:relative; flex:1; display:flex; flex-direction:column;">
       <div id="map" style="flex:1;"></div>
-      <div id="searchBar" style="display:none; position:absolute; top:8px; left:8px; right:52px; z-index:10;">
-        <input class="search-box" type="text" placeholder="🔍 업체명 또는 주소 검색" id="searchInput" oninput="filterMarkers(this.value)">
+      <div id="searchBar" style="display:none; position:absolute; top:8px; left:8px; right:52px; z-index:10; display:flex; gap:6px;">
+        <input class="search-box" style="flex:1;" type="text" placeholder="🔍 주소 검색 or 핀 필터" id="searchInput" oninput="filterMarkers(this.value)" onkeydown="if(event.key==='Enter') searchAddress()">
+        <button class="map-btn" onclick="searchAddress()" style="background:#1a6ef5; color:white; font-size:13px; width:48px;">검색</button>
       </div>
       <div style="position:absolute; top:8px; right:8px; z-index:10; display:flex; flex-direction:column; gap:8px;">
         <button class="map-btn" onclick="toggleSearch()">🔍</button>
@@ -612,6 +613,58 @@ function toggleMapType() {
     btn.style.background = 'white';
     btn.textContent = '🛰️';
   }
+}
+
+function searchAddress() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+
+  // 먼저 기존 핀 필터링
+  filterMarkers(q);
+
+  // 주소로 지도 이동
+  geocoder.addressSearch(q, (result, status) => {
+    if (status === kakao.maps.services.Status.OK) {
+      const lat = parseFloat(result[0].y);
+      const lng = parseFloat(result[0].x);
+      const latlng = new kakao.maps.LatLng(lat, lng);
+      map.setCenter(latlng);
+      map.setLevel(3);
+
+      // 검색 위치 임시 마커 표시
+      if (window._searchMarker) window._searchMarker.setMap(null);
+      window._searchMarker = new kakao.maps.Marker({ position: latlng, zIndex: 10 });
+      window._searchMarker.setMap(map);
+
+      // 여기에 핀 추가할지 물어보기
+      setTimeout(() => {
+        if (confirm(`📍 "${q}"
+이 위치에 핀을 추가할까요?`)) {
+          const injuNo = prompt('인입주 번호를 입력하세요 (없으면 취소)') || '';
+          const newItem = {
+            name: '',
+            bunji: q.split(' ').pop(),
+            addr: q,
+            injuNo,
+            injuList: injuNo ? [injuNo] : [],
+            totalCount: 1,
+            doneCount: 0,
+            done: false,
+            lat,
+            lng
+          };
+          data.push(newItem);
+          saveData();
+          addMarker(newItem, data.length - 1);
+          updateStat();
+          showToast('📍 핀 추가 완료!');
+          if (window._searchMarker) { window._searchMarker.setMap(null); window._searchMarker = null; }
+        }
+      }, 300);
+    } else {
+      showToast('주소를 찾을 수 없어요');
+    }
+  });
 }
 
 function openElecMap(injuNo) {
