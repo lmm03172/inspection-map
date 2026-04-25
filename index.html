@@ -450,6 +450,7 @@
         <button class="map-btn" onclick="toggleSearch()">🔍</button>
         <button class="map-btn" onclick="moveToMyLocation()">📍</button>
         <button class="map-btn" onclick="toggleSheet()">📋</button>
+        <button class="map-btn" id="mapTypeBtn" onclick="toggleMapType()" title="위성지도">🛰️</button>
       </div>
     </div>
     <div class="bottom-sheet" id="bottomSheet" style="display:none;">
@@ -593,6 +594,21 @@ function toggleTabs() {
     btn.textContent = '▼';
   }
   setTimeout(() => map && map.relayout(), 100);
+}
+
+let isSatellite = false;
+function toggleMapType() {
+  isSatellite = !isSatellite;
+  const btn = document.getElementById('mapTypeBtn');
+  if (isSatellite) {
+    map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
+    btn.style.background = '#e3f0ff';
+    btn.textContent = '🗺️';
+  } else {
+    map.setMapTypeId(kakao.maps.MapTypeId.ROADMAP);
+    btn.style.background = 'white';
+    btn.textContent = '🛰️';
+  }
 }
 
 function toggleSearch() {
