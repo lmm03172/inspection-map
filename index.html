@@ -416,10 +416,11 @@
 <div class="header">
   <div class="header-title">⚡ 점검지도</div>
   <div class="header-stat" id="headerStat">0 / 0</div>
+  <button onclick="toggleTabs()" id="tabToggleBtn" style="background:rgba(255,255,255,0.2); border:none; color:white; font-size:16px; width:32px; height:32px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;">▲</button>
 </div>
 
 <!-- Tabs -->
-<div class="tabs">
+<div class="tabs" id="tabBar">
   <div class="tab active" onclick="switchTab('map')">
     <span class="tab-icon">🗺️</span>지도
   </div>
@@ -578,6 +579,20 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
+
+
+function toggleTabs() {
+  const tabBar = document.getElementById('tabBar');
+  const btn = document.getElementById('tabToggleBtn');
+  if (tabBar.style.display === 'none') {
+    tabBar.style.display = 'flex';
+    btn.textContent = '▲';
+  } else {
+    tabBar.style.display = 'none';
+    btn.textContent = '▼';
+  }
+  setTimeout(() => map && map.relayout(), 100);
+}
 
 function toggleSearch() {
   const bar = document.getElementById('searchBar');
