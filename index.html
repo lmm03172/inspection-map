@@ -865,11 +865,39 @@ function filterMarkers(q) {
   });
 }
 
+let myLocationMarker = null;
+
 function moveToMyLocation() {
   if (!navigator.geolocation) { showToast('위치 정보를 사용할 수 없습니다'); return; }
   navigator.geolocation.getCurrentPosition(pos => {
-    map.setCenter(new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const latlng = new kakao.maps.LatLng(lat, lng);
+    map.setCenter(latlng);
     map.setLevel(4);
+
+    // 기존 내 위치 마커 제거
+    if (myLocationMarker) myLocationMarker.setMap(null);
+
+    // 파란 점으로 내 위치 표시
+    const div = document.createElement('div');
+    div.style.cssText = `
+      width: 18px;
+      height: 18px;
+      background: #1a6ef5;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 0 0 4px rgba(26,110,245,0.25);
+    `;
+
+    myLocationMarker = new kakao.maps.CustomOverlay({
+      position: latlng,
+      content: div,
+      yAnchor: 0.5,
+      zIndex: 10
+    });
+    myLocationMarker.setMap(map);
+    showToast('📍 현재 위치를 표시했습니다');
   }, () => showToast('위치 정보를 가져올 수 없습니다'));
 }
 
