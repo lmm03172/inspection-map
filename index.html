@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>점검지도</title>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=f34c8ba14f5b02f2a0c69ec56e1ed5e8&libraries=services"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  
+  :root {
+    --primary: #1a6ef5;
+    --primary-dark: #1258cc;
+    --danger: #e53935;
+    --success: #2e7d32;
+    --warning: #f57c00;
+    --bg: #f5f6fa;
+    --card: #ffffff;
+    --text: #1a1a2e;
+    --text-sub: #6b7280;
+    --border: #e5e7eb;
+    --header-h: 56px;
+    --bottom-h: 60px;
+  }
+
+  body {
+    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Header */
+  .header {
+    height: var(--header-h);
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(26,110,245,0.3);
+    z-index: 100;
+  }
+  .header-title { color: white; font-size: 17px; font-weight: 700; flex: 1; }
+  .header-stat {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+  }
+
+  /* Tab bar */
+  .tabs {
+    display: flex;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 99;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-sub);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .tab-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+
+  /* Content */
+  .content { flex: 1; overflow: hidden; position: relative; }
+  .page { position: absolute; inset: 0; display: none; flex-direction: column; }
+  .page.active { display: flex; }
+
+  /* Map page */
+  #map { flex: 1; }
+
+  /* Map controls */
+  .map-controls {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    z-index: 10;
+    display: flex;
+    gap: 8px;
+  }
+  .search-box {
+    flex: 1;
+    background: white;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 13px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    outline: none;
+  }
+  .map-btn {
+    background: white;
+    border: none;
+    border-radius: 10px;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  /* Bottom sheet */
+  .bottom-sheet {
+    background: var(--card);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+    max-height: 45%;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 10px auto 0;
+  }
+  .sheet-title {
+    padding: 8px 16px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-sub);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* List item */
+  .list-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    gap: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .list-item:active { background: var(--bg); }
+  .pin-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .pin-dot.todo { background: var(--danger); }
+  .pin-dot.done { background: var(--success); }
+  .item-info { flex: 1; min-width: 0; }
+  .item-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .item-addr {
+    font-size: 11px;
+    color: var(--text-sub);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+  .item-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+  .badge-todo { background: #fdecea; color: var(--danger); }
+  .badge-done { background: #e8f5e9; color: var(--success); }
+
+  /* Upload page */
+  .page-scroll { overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Base address input */
+  .addr-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .addr-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .addr-input:focus { border-color: var(--primary); }
+  .addr-display {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+  }
+  .addr-display.empty { color: var(--text-sub); font-weight: 400; }
+
+  /* File upload */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg);
+  }
+  .upload-zone:active { border-color: var(--primary); background: #eef3ff; }
+  .upload-icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-text { font-size: 13px; color: var(--text-sub); }
+  .upload-text strong { color: var(--primary); }
+  input[type=file] { display: none; }
+
+  /* Preview image */
+  .preview-img {
+    width: 100%;
+    border-radius: 10px;
+    max-height: 200px;
+    object-fit: cover;
+    margin-bottom: 12px;
+  }
+
+  /* Extracted list */
+  .extracted-list { display: flex; flex-direction: column; gap: 6px; }
+  .extracted-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--bg);
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  .extracted-item input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--primary); }
+
+  /* Buttons */
+  .btn {
+    width: 100%;
+    padding: 13px;
+    border-radius: 12px;
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:disabled { background: #c5d5f5; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-success { background: var(--success); color: white; }
+  .btn-outline {
+    background: transparent;
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+  }
+  .btn-sm {
+    width: auto;
+    padding: 8px 14px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  /* Excel page */
+  .excel-preview {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .excel-preview table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .excel-preview th {
+    background: var(--primary);
+    color: white;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+  }
+  .excel-preview td {
+    padding: 8px 10px;
+    border-top: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .excel-preview tr:nth-child(even) td { background: var(--bg); }
+
+  /* Popup */
+  .popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .popup-overlay.show { display: flex; }
+  .popup {
+    background: var(--card);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px 36px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .popup-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .popup-addr { font-size: 13px; color: var(--text-sub); margin-bottom: 16px; }
+  .popup-btns { display: flex; flex-direction: column; gap: 8px; }
+
+  /* Loading */
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    gap: 12px;
+  }
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--text-sub); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #1a1a2e;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 2000;
+    opacity: 0;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--text-sub);
+    font-size: 13px;
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 8px; }
+
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-title">⚡ 점검지도</div>
+  <div class="header-stat" id="headerStat">0 / 0</div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('map')">
+    <span class="tab-icon">🗺️</span>지도
+  </div>
+  <div class="tab" onclick="switchTab('list')">
+    <span class="tab-icon">📋</span>목록
+  </div>
+  <div class="tab" onclick="switchTab('photo')">
+    <span class="tab-icon">📸</span>사진삭제
+  </div>
+  <div class="tab" onclick="switchTab('upload')">
+    <span class="tab-icon">📂</span>엑셀
+  </div>
+</div>
+
+<!-- Content -->
+<div class="content">
+
+  <!-- Map Page -->
+  <div class="page active" id="page-map">
+    <div style="position:relative; flex:1; display:flex; flex-direction:column;">
+      <div class="map-controls">
+        <input class="search-box" type="text" placeholder="🔍 업체명 또는 주소 검색" id="searchInput" oninput="filterMarkers(this.value)">
+        <button class="map-btn" onclick="moveToMyLocation()" title="내 위치">📍</button>
+      </div>
+      <div id="map" style="flex:1;"></div>
+    </div>
+    <div class="bottom-sheet" id="bottomSheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">
+        <span>오늘 점검 목록</span>
+        <span id="listCount" style="color:var(--text-sub); font-weight:400; font-size:12px;"></span>
+      </div>
+      <div id="miniList"></div>
+    </div>
+  </div>
+
+  <!-- List Page -->
+  <div class="page" id="page-list">
+    <div class="page-scroll" style="padding:0;">
+      <div style="padding:12px 16px; background:var(--card); border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center;">
+        <input class="addr-input" style="margin:0;" type="text" placeholder="🔍 검색" id="listSearch" oninput="renderList()">
+        <select class="addr-input" style="margin:0; width:auto;" id="filterStatus" onchange="renderList()">
+          <option value="all">전체</option>
+          <option value="todo">미방문</option>
+          <option value="done">완료</option>
+        </select>
+      </div>
+      <div id="fullList" style="padding-bottom:16px;"></div>
+    </div>
+  </div>
+
+  <!-- Photo Delete Page -->
+  <div class="page" id="page-photo">
+    <div class="page-scroll">
+      <div class="card">
+        <div class="card-title">📸 사진으로 방문완료 처리</div>
+        <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px; line-height:1.6;">업무 앱 화면을 촬영한 사진을 업로드하면 AI가 번지를 읽어서 자동으로 방문완료 처리합니다.</p>
+        
+        <div class="card" style="background:var(--bg); padding:12px; margin-bottom:12px;">
+          <div style="font-size:12px; font-weight:700; margin-bottom:6px; color:var(--text-sub);">현재 베이스 주소</div>
+          <div class="addr-display" id="photoBaseAddr">
+            <span class="empty">엑셀 탭에서 베이스 주소를 먼저 설정해주세요</span>
+          </div>
+        </div>
+
+        <label for="photoInput">
+          <div class="upload-zone" id="photoZone">
+            <div class="upload-icon">📷</div>
+            <div class="upload-text">업무 앱 화면 사진을<br><strong>터치해서 업로드</strong></div>
+          </div>
+        </label>
+        <input type="file" id="photoInput" accept="image/*" onchange="handlePhotoUpload(this)">
+      </div>
+
+      <div id="photoResult" style="display:none;">
+        <div class="card">
+          <div class="card-title">🔍 AI 인식 결과</div>
+          <img id="previewImg" class="preview-img">
+          <div id="extractedContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Page -->
+  <div class="page" id="page-upload">
+    <div class="page-scroll">
+      
+      <!-- Base Address -->
+      <div class="card">
+        <div class="card-title">📍 베이스 주소 설정</div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <input class="addr-input" id="sido" type="text" placeholder="시/도 (예: 경상북도)" value="경상북도">
+          <input class="addr-input" id="sigungu" type="text" placeholder="시/군/구 (예: 문경시)" value="문경시">
+          <input class="addr-input" id="eupmyeon" type="text" placeholder="읍/면 (예: 영순면)" value="영순면">
+          <input class="addr-input" id="ri" type="text" placeholder="리 (예: 율곡리)" value="율곡리">
+          <button class="btn btn-outline btn-sm" onclick="setBaseAddr()" style="align-self:flex-start; margin-top:4px;">✅ 베이스 주소 설정</button>
+        </div>
+        <div class="addr-display" id="baseAddrDisplay" style="margin-top:10px;">
+          <span class="empty">위에서 설정해주세요</span>
+        </div>
+      </div>
+
+      <!-- Excel Upload -->
+      <div class="card">
+        <div class="card-title">📊 엑셀 파일 업로드</div>
+        <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px; line-height:1.6;">
+          형식: <strong>A열 번지</strong> 또는 <strong>A열 상호 / B열 번지</strong><br>
+          번지만 있으면 베이스 주소와 자동 조합됩니다.
+        </p>
+        <label for="excelInput">
+          <div class="upload-zone">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">엑셀 파일을<br><strong>터치해서 업로드</strong></div>
+          </div>
+        </label>
+        <input type="file" id="excelInput" accept=".xlsx,.xls,.csv" onchange="handleExcelUpload(this)">
+        <div id="excelPreview" style="margin-top:12px;"></div>
+        <div id="excelActions" style="display:none; margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+          <button class="btn btn-primary" onclick="plotOnMap()">🗺️ 지도에 표시하기</button>
+        </div>
+      </div>
+
+      <!-- Reset -->
+      <div class="card">
+        <div class="card-title">🔄 초기화</div>
+        <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px;">모든 핀과 데이터를 초기화합니다.</p>
+        <button class="btn btn-danger" onclick="resetAll()">전체 초기화</button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Popup -->
+<div class="popup-overlay" id="popupOverlay" onclick="closePopup(event)">
+  <div class="popup">
+    <div class="popup-title" id="popupTitle"></div>
+    <div class="popup-addr" id="popupAddr"></div>
+    <div class="popup-btns">
+      <button class="btn btn-success" id="popupDoneBtn" onclick="markDone()">✅ 방문 완료</button>
+      <button class="btn btn-outline" onclick="openRoadview()">🔭 로드뷰 보기</button>
+      <button class="btn btn-danger" onclick="deletePin()">🗑️ 핀 삭제</button>
+      <button class="btn" style="background:var(--bg); color:var(--text-sub);" onclick="closePopup()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ===== STATE =====
+let map = null;
+let markers = [];
+let data = JSON.parse(localStorage.getItem('jd_data') || '[]');
+let baseAddr = localStorage.getItem('jd_base') || '';
+let selectedIdx = null;
+let geocoder = null;
+let pendingGeo = [];
+let roadviewOverlay = null;
+
+// ===== INIT =====
+window.onload = () => {
+  initMap();
+  if (baseAddr) updateBaseAddrUI();
+  renderAll();
+};
+
+function initMap() {
+  const container = document.getElementById('map');
+  const options = {
+    center: new kakao.maps.LatLng(36.5, 128.0),
+    level: 7
+  };
+  map = new kakao.maps.Map(container, options);
+  geocoder = new kakao.maps.services.Geocoder();
+  
+  if (data.length > 0) plotAllMarkers();
+}
+
+// ===== TAB =====
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const tabs = ['map','list','photo','upload'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  
+  if (tab === 'map') { setTimeout(() => map && map.relayout(), 100); }
+  if (tab === 'list') renderList();
+  if (tab === 'photo') updatePhotoBaseAddr();
+}
+
+// ===== BASE ADDRESS =====
+function setBaseAddr() {
+  const sido = document.getElementById('sido').value.trim();
+  const sigungu = document.getElementById('sigungu').value.trim();
+  const eupmyeon = document.getElementById('eupmyeon').value.trim();
+  const ri = document.getElementById('ri').value.trim();
+  if (!sido || !sigungu) { showToast('시/도와 시/군/구는 필수입니다'); return; }
+  baseAddr = [sido, sigungu, eupmyeon, ri].filter(Boolean).join(' ');
+  localStorage.setItem('jd_base', baseAddr);
+  updateBaseAddrUI();
+  showToast('✅ 베이스 주소 설정 완료');
+}
+
+function updateBaseAddrUI() {
+  const el = document.getElementById('baseAddrDisplay');
+  el.innerHTML = baseAddr || '<span class="empty">설정되지 않음</span>';
+  updatePhotoBaseAddr();
+}
+
+function updatePhotoBaseAddr() {
+  const el = document.getElementById('photoBaseAddr');
+  if (baseAddr) el.innerHTML = `<strong>${baseAddr}</strong>`;
+  else el.innerHTML = '<span class="empty">엑셀 탭에서 베이스 주소를 먼저 설정해주세요</span>';
+}
+
+function getFullAddr(bunji) {
+  return baseAddr ? `${baseAddr} ${bunji}` : bunji;
+}
+
+// ===== EXCEL =====
+function handleExcelUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(e.target.result, { type: 'binary' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    
+    const parsed = [];
+    rows.forEach(row => {
+      if (!row || row.length === 0) return;
+      let name = '', bunji = '';
+      if (row.length >= 2) { name = String(row[0] || '').trim(); bunji = String(row[1] || '').trim(); }
+      else { bunji = String(row[0] || '').trim(); }
+      if (bunji) parsed.push({ name, bunji, addr: getFullAddr(bunji), done: false });
+    });
+
+    if (parsed.length === 0) { showToast('데이터를 읽을 수 없습니다'); return; }
+
+    // Preview
+    const preview = document.getElementById('excelPreview');
+    preview.innerHTML = `
+      <div class="excel-preview">
+        <table>
+          <thead><tr><th>No</th><th>번지</th><th>전체 주소</th></tr></thead>
+          <tbody>${parsed.slice(0,5).map((r,i) => `<tr><td>${i+1}</td><td>${r.bunji}</td><td>${r.addr}</td></tr>`).join('')}</tbody>
+        </table>
+      </div>
+      <div style="margin-top:8px; font-size:12px; color:var(--text-sub); text-align:center;">총 ${parsed.length}건 (미리보기 5건)</div>
+    `;
+
+    document.getElementById('excelActions').style.display = 'flex';
+    window._pendingData = parsed;
+    showToast(`📊 ${parsed.length}건 읽기 완료`);
+  };
+  reader.readAsBinaryString(file);
+}
+
+function plotOnMap() {
+  if (!window._pendingData) return;
+  if (!baseAddr) { showToast('⚠️ 베이스 주소를 먼저 설정해주세요'); return; }
+  
+  data = window._pendingData;
+  saveData();
+  clearMarkers();
+  plotAllMarkers();
+  switchTab('map');
+  showToast(`🗺️ ${data.length}건 지도에 표시 중...`);
+}
+
+// ===== MARKERS =====
+function plotAllMarkers() {
+  clearMarkers();
+  let geocoded = 0;
+  const total = data.length;
+  
+  data.forEach((item, idx) => {
+    if (item.lat && item.lng) {
+      addMarker(item, idx);
+      geocoded++;
+      if (geocoded === 1) map.setCenter(new kakao.maps.LatLng(item.lat, item.lng));
+    } else {
+      geocodeItem(item, idx, total);
+    }
+  });
+}
+
+function geocodeItem(item, idx, total) {
+  setTimeout(() => {
+    geocoder.addressSearch(item.addr, (result, status) => {
+      if (status === kakao.maps.services.Status.OK) {
+        item.lat = parseFloat(result[0].y);
+        item.lng = parseFloat(result[0].x);
+        saveData();
+        addMarker(item, idx);
+        updateStat();
+        if (idx === 0) map.setCenter(new kakao.maps.LatLng(item.lat, item.lng));
+      }
+    });
+  }, idx * 150);
+}
+
+function addMarker(item, idx) {
+  const pos = new kakao.maps.LatLng(item.lat, item.lng);
+  const color = item.done ? '#2e7d32' : '#e53935';
+  
+  const content = `
+    <div style="position:relative; text-align:center;">
+      <div style="
+        background:${color};
+        color:white;
+        font-size:10px;
+        font-weight:700;
+        padding:3px 7px;
+        border-radius:10px;
+        white-space:nowrap;
+        box-shadow:0 2px 6px rgba(0,0,0,0.3);
+        margin-bottom:2px;
+      ">${item.name || item.bunji}</div>
+      <div style="
+        width:0; height:0;
+        border-left:5px solid transparent;
+        border-right:5px solid transparent;
+        border-top:6px solid ${color};
+        margin:0 auto;
+      "></div>
+    </div>
+  `;
+
+  const marker = new kakao.maps.CustomOverlay({
+    position: pos,
+    content: content,
+    yAnchor: 1.1
+  });
+  marker.setMap(map);
+  marker._idx = idx;
+  marker._content = content;
+
+  // Click via event delegation workaround
+  const div = document.createElement('div');
+  div.innerHTML = content;
+  div.querySelector('div').addEventListener('click', () => openPopup(idx));
+  
+  const clickOverlay = new kakao.maps.CustomOverlay({
+    position: pos,
+    content: div,
+    yAnchor: 1.1,
+    zIndex: 3
+  });
+  clickOverlay.setMap(map);
+  markers.push({ overlay: marker, clickOverlay, idx });
+}
+
+function clearMarkers() {
+  markers.forEach(m => { m.overlay.setMap(null); m.clickOverlay.setMap(null); });
+  markers = [];
+}
+
+function updateMarker(idx) {
+  const m = markers.find(m => m.idx === idx);
+  if (!m) return;
+  m.overlay.setMap(null);
+  m.clickOverlay.setMap(null);
+  markers = markers.filter(x => x.idx !== idx);
+  if (data[idx] && !data[idx].done) addMarker(data[idx], idx);
+  else if (data[idx] && data[idx].done) addMarker(data[idx], idx);
+}
+
+// ===== POPUP =====
+function openPopup(idx) {
+  selectedIdx = idx;
+  const item = data[idx];
+  document.getElementById('popupTitle').textContent = item.name || `번지: ${item.bunji}`;
+  document.getElementById('popupAddr').textContent = item.addr;
+  const doneBtn = document.getElementById('popupDoneBtn');
+  if (item.done) { doneBtn.textContent = '↩️ 미방문으로 변경'; doneBtn.style.background = 'var(--warning)'; }
+  else { doneBtn.textContent = '✅ 방문 완료'; doneBtn.style.background = 'var(--success)'; }
+  document.getElementById('popupOverlay').classList.add('show');
+}
+
+function closePopup(e) {
+  if (!e || e.target === document.getElementById('popupOverlay')) {
+    document.getElementById('popupOverlay').classList.remove('show');
+  }
+}
+
+function markDone() {
+  if (selectedIdx === null) return;
+  data[selectedIdx].done = !data[selectedIdx].done;
+  saveData();
+  updateMarker(selectedIdx);
+  renderAll();
+  closePopup();
+  showToast(data[selectedIdx].done ? '✅ 방문 완료 처리' : '↩️ 미방문으로 변경');
+}
+
+function deletePin() {
+  if (selectedIdx === null) return;
+  if (!confirm(`"${data[selectedIdx].name || data[selectedIdx].bunji}" 핀을 삭제할까요?`)) return;
+  const m = markers.find(m => m.idx === selectedIdx);
+  if (m) { m.overlay.setMap(null); m.clickOverlay.setMap(null); }
+  markers = markers.filter(m => m.idx !== selectedIdx);
+  data.splice(selectedIdx, 1);
+  // re-index
+  markers.forEach(m => { if (m.idx > selectedIdx) m.idx--; });
+  saveData();
+  renderAll();
+  closePopup();
+  showToast('🗑️ 핀 삭제 완료');
+}
+
+function openRoadview() {
+  if (selectedIdx === null) return;
+  const item = data[selectedIdx];
+  if (!item.lat || !item.lng) { showToast('좌표 정보가 없습니다'); return; }
+  const url = `https://map.kakao.com/link/roadview/${item.lat},${item.lng}`;
+  window.open(url, '_blank');
+  closePopup();
+}
+
+// ===== FILTER / SEARCH =====
+function filterMarkers(q) {
+  q = q.toLowerCase();
+  markers.forEach(m => {
+    const item = data[m.idx];
+    const match = !q || (item.name || '').toLowerCase().includes(q) || item.addr.toLowerCase().includes(q) || item.bunji.toLowerCase().includes(q);
+    m.overlay.setMap(match ? map : null);
+    m.clickOverlay.setMap(match ? map : null);
+  });
+}
+
+function moveToMyLocation() {
+  if (!navigator.geolocation) { showToast('위치 정보를 사용할 수 없습니다'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    map.setCenter(new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
+    map.setLevel(4);
+  }, () => showToast('위치 정보를 가져올 수 없습니다'));
+}
+
+// ===== RENDER =====
+function renderAll() {
+  updateStat();
+  renderMiniList();
+  renderList();
+}
+
+function updateStat() {
+  const done = data.filter(d => d.done).length;
+  document.getElementById('headerStat').textContent = `${done} / ${data.length} 완료`;
+}
+
+function renderMiniList() {
+  const el = document.getElementById('miniList');
+  document.getElementById('listCount').textContent = `총 ${data.length}건`;
+  if (data.length === 0) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div>엑셀 파일을 업로드하세요</div>'; return; }
+  el.innerHTML = data.slice(0, 20).map((item, idx) => `
+    <div class="list-item" onclick="openPopup(${idx})">
+      <div class="pin-dot ${item.done ? 'done' : 'todo'}"></div>
+      <div class="item-info">
+        <div class="item-name">${item.name || '번지: ' + item.bunji}</div>
+        <div class="item-addr">${item.addr}</div>
+      </div>
+      <span class="item-badge ${item.done ? 'badge-done' : 'badge-todo'}">${item.done ? '완료' : '미방문'}</span>
+    </div>
+  `).join('') + (data.length > 20 ? `<div style="text-align:center;padding:10px;font-size:12px;color:var(--text-sub);">+ ${data.length - 20}건 더보기 → 목록 탭</div>` : '');
+}
+
+function renderList() {
+  const el = document.getElementById('fullList');
+  const q = (document.getElementById('listSearch')?.value || '').toLowerCase();
+  const filter = document.getElementById('filterStatus')?.value || 'all';
+  
+  let filtered = data.filter((item, idx) => {
+    item._origIdx = idx;
+    const matchQ = !q || (item.name || '').toLowerCase().includes(q) || item.addr.toLowerCase().includes(q);
+    const matchF = filter === 'all' || (filter === 'done' && item.done) || (filter === 'todo' && !item.done);
+    return matchQ && matchF;
+  });
+
+  if (filtered.length === 0) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div>검색 결과가 없습니다</div>'; return; }
+
+  el.innerHTML = filtered.map(item => `
+    <div class="list-item" onclick="openPopup(${item._origIdx})">
+      <div class="pin-dot ${item.done ? 'done' : 'todo'}"></div>
+      <div class="item-info">
+        <div class="item-name">${item.name || '번지: ' + item.bunji}</div>
+        <div class="item-addr">${item.addr}</div>
+      </div>
+      <span class="item-badge ${item.done ? 'badge-done' : 'badge-todo'}">${item.done ? '완료' : '미방문'}</span>
+    </div>
+  `).join('');
+}
+
+// ===== PHOTO AI =====
+async function handlePhotoUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (!baseAddr) { showToast('⚠️ 베이스 주소를 먼저 설정해주세요'); return; }
+
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const base64 = e.target.result.split(',')[1];
+    const imgSrc = e.target.result;
+
+    document.getElementById('photoResult').style.display = 'block';
+    document.getElementById('previewImg').src = imgSrc;
+    document.getElementById('extractedContent').innerHTML = `
+      <div class="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">AI가 사진을 분석하고 있습니다...</div>
+      </div>
+    `;
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 }
+              },
+              {
+                type: 'text',
+                text: `이 사진은 전기 점검 업무 앱의 화면입니다. 사진에서 번지(지번) 숫자들만 추출해주세요. 번지는 예를 들어 "172-1", "486", "149-3" 같은 형식입니다. 반드시 JSON 배열 형식으로만 답해주세요. 예: ["172-1", "486", "149-3"]. 다른 텍스트 없이 JSON만 출력하세요.`
+              }
+            ]
+          }]
+        })
+      });
+
+      const result = await response.json();
+      const text = result.content[0].text.trim();
+      let bunjiList = [];
+      try { bunjiList = JSON.parse(text); } catch { bunjiList = []; }
+
+      if (bunjiList.length === 0) {
+        document.getElementById('extractedContent').innerHTML = '<div style="text-align:center;padding:16px;color:var(--danger);">번지를 인식하지 못했습니다.<br>더 선명한 사진을 시도해보세요.</div>';
+        return;
+      }
+
+      // Match with data
+      const matched = [];
+      bunjiList.forEach(b => {
+        const idx = data.findIndex(d => d.bunji === b && !d.done);
+        if (idx !== -1) matched.push({ bunji: b, idx });
+      });
+
+      document.getElementById('extractedContent').innerHTML = `
+        <div style="font-size:13px; font-weight:700; margin-bottom:10px;">📋 인식된 번지: ${bunjiList.length}건</div>
+        <div class="extracted-list" id="extractedList">
+          ${bunjiList.map((b, i) => {
+            const found = matched.find(m => m.bunji === b);
+            return `
+              <div class="extracted-item">
+                <input type="checkbox" id="chk${i}" ${found ? 'checked' : 'disabled'} data-bunji="${b}" data-idx="${found ? found.idx : -1}">
+                <span style="flex:1;">${baseAddr} <strong>${b}</strong></span>
+                <span style="font-size:10px; color:${found ? 'var(--success)' : 'var(--text-sub)'};">${found ? '✅ 매칭' : '미등록'}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div style="margin-top:12px; font-size:12px; color:var(--text-sub);">매칭된 항목: ${matched.length}건</div>
+        <button class="btn btn-success" style="margin-top:10px;" onclick="applyPhotoDelete()">✅ 선택한 항목 방문완료 처리</button>
+      `;
+    } catch (err) {
+      document.getElementById('extractedContent').innerHTML = `<div style="text-align:center;padding:16px;color:var(--danger);">오류가 발생했습니다.<br>${err.message}</div>`;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function applyPhotoDelete() {
+  const checkboxes = document.querySelectorAll('#extractedList input[type=checkbox]:checked');
+  let count = 0;
+  checkboxes.forEach(cb => {
+    const idx = parseInt(cb.dataset.idx);
+    if (idx >= 0 && data[idx]) {
+      data[idx].done = true;
+      updateMarker(idx);
+      count++;
+    }
+  });
+  saveData();
+  renderAll();
+  showToast(`✅ ${count}건 방문완료 처리됨`);
+}
+
+// ===== RESET =====
+function resetAll() {
+  if (!confirm('모든 데이터를 초기화할까요?')) return;
+  clearMarkers();
+  data = [];
+  saveData();
+  renderAll();
+  document.getElementById('excelPreview').innerHTML = '';
+  document.getElementById('excelActions').style.display = 'none';
+  showToast('🔄 초기화 완료');
+}
+
+// ===== UTILS =====
+function saveData() { localStorage.setItem('jd_data', JSON.stringify(data)); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
