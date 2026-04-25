@@ -548,6 +548,7 @@
         <div id="excelActions" style="display:none; margin-top:12px; display:flex; flex-direction:column; gap:8px;">
           <button class="btn btn-primary" onclick="plotOnMap()">🗺️ 지도에 표시하기</button>
         </div>
+        <div id="failedListBox" style="display:none;"></div>
       </div>
 
       <!-- Reset -->
@@ -714,23 +715,27 @@ function handleExcelUpload(input) {
 
       // 전체 주소인지 번지만인지 판단
       const isFullAddr = cell0.includes('도') || cell0.includes('시') || cell0.includes('군') || cell0.includes('읍') || cell0.includes('면') || cell0.includes('리');
+      const cell2 = String(row[2] || '').trim();
+
+      let injuNo = '';
 
       if (isFullAddr) {
-        // 전체 주소인 경우 → 그대로 addr로 사용, 마지막 부분을 bunji로
         addr = cell0;
         const parts = cell0.split(' ');
         bunji = parts[parts.length - 1];
         name = cell1 || '';
+        injuNo = cell2 || '';
       } else if (row.length >= 2) {
         name = cell0;
         bunji = cell1;
         addr = getFullAddr(bunji);
+        injuNo = cell2 || '';
       } else {
         bunji = cell0;
         addr = getFullAddr(bunji);
       }
 
-      if (bunji) parsed.push({ name, bunji, addr, done: false });
+      if (bunji) parsed.push({ name, bunji, addr, injuNo, done: false });
     });
 
     if (parsed.length === 0) { showToast('데이터를 읽을 수 없습니다'); return; }
@@ -756,9 +761,11 @@ function handleExcelUpload(input) {
 
 function plotOnMap() {
   if (!window._pendingData) return;
-  if (!baseAddr) { showToast('⚠️ 베이스 주소를 먼저 설정해주세요'); return; }
   
   data = window._pendingData;
+  failedList = [];
+  const failedBox = document.getElementById('failedListBox');
+  if (failedBox) failedBox.style.display = 'none';
   saveData();
   clearMarkers();
   plotAllMarkers();
@@ -783,6 +790,8 @@ function plotAllMarkers() {
   });
 }
 
+let failedList = [];
+
 function geocodeItem(item, idx, total) {
   setTimeout(() => {
     geocoder.addressSearch(item.addr, (result, status) => {
@@ -793,9 +802,34 @@ function geocodeItem(item, idx, total) {
         addMarker(item, idx);
         updateStat();
         if (idx === 0) map.setCenter(new kakao.maps.LatLng(item.lat, item.lng));
+      } else {
+        // 실패한 주소 기록
+        failedList.push(item.addr);
+        item.failed = true;
+        saveData();
+        
+        // 모든 지오코딩 끝났을 때 실패 목록 표시
+        const totalGeocoded = data.filter(d => d.lat || d.failed).length;
+        if (totalGeocoded === data.length && failedList.length > 0) {
+          showFailedList();
+        }
       }
     });
   }, idx * 150);
+}
+
+function showFailedList() {
+  const el = document.getElementById('failedListBox');
+  if (!el) return;
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="background:#fdecea; border-radius:10px; padding:12px; margin-top:12px;">
+      <div style="font-size:13px; font-weight:700; color:#c0392b; margin-bottom:8px;">❌ 좌표 찾기 실패: ${failedList.length}건</div>
+      <div style="font-size:12px; color:#c0392b; display:flex; flex-direction:column; gap:4px;">
+        ${failedList.map(addr => `<div>• ${addr}</div>`).join('')}
+      </div>
+    </div>
+  `;
 }
 
 function addMarker(item, idx) {
@@ -845,7 +879,30 @@ function openPopup(idx) {
   selectedIdx = idx;
   const item = data[idx];
   document.getElementById('popupTitle').textContent = item.name || `번지: ${item.bunji}`;
-  document.getElementById('popupAddr').textContent = item.addr;
+  
+  // 주소 + 인입주 번호 표시
+  let addrText = item.addr;
+  if (item.injuNo) addrText += `
+⚡ 인입주 번호: ${item.injuNo}`;
+  document.getElementById('popupAddr').textContent = addrText;
+  document.getElementById('popupAddr').style.whiteSpace = 'pre-line';
+
+  // ElecMap 버튼 표시/숨김
+  const elecBtn = document.getElementById('popupElecBtn');
+  if (item.injuNo) {
+    elecBtn.style.display = 'block';
+    elecBtn.onclick = () => {
+      navigator.clipboard.writeText(item.injuNo).then(() => {
+        showToast(`⚡ ${item.injuNo} 복사됨! ElecMap에 붙여넣기 하세요`);
+      }).catch(() => {
+        showToast(`⚡ 인입주 번호: ${item.injuNo}`);
+      });
+      setTimeout(() => window.open('https://elecmap.kr/search', '_blank'), 500);
+    };
+  } else {
+    elecBtn.style.display = 'none';
+  }
+
   const doneBtn = document.getElementById('popupDoneBtn');
   if (item.done) { doneBtn.textContent = '↩️ 미방문으로 변경'; doneBtn.style.background = 'var(--warning)'; }
   else { doneBtn.textContent = '✅ 방문 완료'; doneBtn.style.background = 'var(--success)'; }
