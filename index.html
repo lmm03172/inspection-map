@@ -907,18 +907,20 @@ function openPopup(idx) {
 
   // ElecMap 버튼 표시/숨김
   const elecBtn = document.getElementById('popupElecBtn');
-  if (item.injuNo) {
-    elecBtn.style.display = 'block';
-    elecBtn.onclick = () => {
-      navigator.clipboard.writeText(item.injuNo).then(() => {
-        showToast(`⚡ ${item.injuNo} 복사됨! ElecMap에 붙여넣기 하세요`);
-      }).catch(() => {
-        showToast(`⚡ 인입주 번호: ${item.injuNo}`);
-      });
-      setTimeout(() => window.open('https://elecmap.kr/search', '_blank'), 500);
-    };
-  } else {
-    elecBtn.style.display = 'none';
+  if (elecBtn) {
+    if (item.injuNo) {
+      elecBtn.style.display = 'block';
+      elecBtn.onclick = () => {
+        navigator.clipboard.writeText(item.injuNo).then(() => {
+          showToast(`⚡ ${item.injuNo} 복사됨! ElecMap에 붙여넣기 하세요`);
+        }).catch(() => {
+          showToast(`⚡ 인입주 번호: ${item.injuNo}`);
+        });
+        setTimeout(() => window.open('https://elecmap.kr/search', '_blank'), 500);
+      };
+    } else {
+      elecBtn.style.display = 'none';
+    }
   }
 
   const doneBtn = document.getElementById('popupDoneBtn');
