@@ -730,10 +730,11 @@ function handleExcelUpload(input) {
       let injuNo = '';
 
       if (isFullAddr) {
+        // A열 전체주소, C열 인입주번호
         addr = cell0;
         const parts = cell0.split(' ');
         bunji = parts[parts.length - 1];
-        name = cell1 || '';
+        name = '';
         injuNo = cell2 || '';
       } else if (row.length >= 2) {
         name = cell0;
