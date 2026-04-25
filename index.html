@@ -1062,14 +1062,40 @@ async function handlePhotoUpload(input) {
 function applyPhotoDelete() {
   const checkboxes = document.querySelectorAll('#extractedList input[type=checkbox]:checked');
   let count = 0;
+
+  // 인식된 번지별로 하나씩 완료처리
+  const bunjiCount = {};
   checkboxes.forEach(cb => {
-    const idx = parseInt(cb.dataset.idx);
-    if (idx >= 0 && data[idx]) {
-      data[idx].done = true;
-      updateMarker(idx);
-      count++;
+    const bunji = cb.dataset.bunji;
+    bunjiCount[bunji] = (bunjiCount[bunji] || 0) + 1;
+  });
+
+  Object.entries(bunjiCount).forEach(([bunji, cnt]) => {
+    let completed = 0;
+    for (let i = 0; i < data.length; i++) {
+      if ((data[i].bunji === bunji || data[i].addr.endsWith(bunji)) && !data[i].done) {
+        data[i].done = true;
+        updateMarker(i);
+        count++;
+        completed++;
+        if (completed >= cnt) break;
+      }
+    }
+
+    // 해당 번지 전체 완료됐는지 확인 → 전부 완료면 핀 삭제
+    const allDone = data.filter(d => d.bunji === bunji || d.addr.endsWith(bunji)).every(d => d.done);
+    if (allDone) {
+      // 완료된 핀 지도에서 제거
+      data.forEach((d, i) => {
+        if ((d.bunji === bunji || d.addr.endsWith(bunji)) && d.done) {
+          const m = markers.find(m => m.idx === i);
+          if (m) { m.overlay.setMap(null); markers = markers.filter(x => x.idx !== i); }
+        }
+      });
+      showToast(`🗑️ ${bunji} 전체 완료 → 핀 삭제!`);
     }
   });
+
   saveData();
   renderAll();
   showToast(`✅ ${count}건 방문완료 처리됨`);
