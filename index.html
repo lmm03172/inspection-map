@@ -738,8 +738,7 @@ function applyTextDelete() {
   const text = document.getElementById('deletePinText').value.trim();
   if (!text) { showToast('번지를 입력해주세요'); return; }
 
-  const bunjiList = text.split('
-').map(l => l.trim()).filter(l => l);
+  const bunjiList = text.split('\n').map(l => l.trim()).filter(l => l);
   let count = 0;
 
   bunjiList.forEach(bunji => {
