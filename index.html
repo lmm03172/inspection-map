@@ -696,8 +696,7 @@ async function applyTextAdd() {
   const text = document.getElementById('addPinText').value.trim();
   if (!text) { showToast('주소를 입력해주세요'); return; }
 
-  const lines = text.split('
-').map(l => l.trim()).filter(l => l);
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
   const addrs = lines.map(line => {
     const isFullAddr = line.includes('도') || line.includes('시') || line.includes('군');
     if (isFullAddr) return line;
