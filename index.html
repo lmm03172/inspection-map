@@ -445,8 +445,8 @@
   <!-- Map Page -->
   <div class="page active" id="page-map">
     <div style="position:relative; flex:1; display:flex; flex-direction:column;">
-      <div id="mapWrapper" style="flex:1; overflow:hidden; position:relative;">
-        <div id="map" style="position:absolute; top:-30%; left:-30%; width:160%; height:160%;"></div>
+      <div id="mapWrapper" style="flex:1; position:relative;">
+        <div id="map" style="width:100%; height:100%;"></div>
       </div>
       <div id="searchBar" style="display:none; position:absolute; top:8px; left:8px; right:52px; z-index:10; display:flex; gap:6px;">
         <input class="search-box" style="flex:1;" type="text" placeholder="🔍 주소 검색 or 핀 필터" id="searchInput" oninput="filterMarkers(this.value)" onkeydown="if(event.key==='Enter') searchAddress()">
@@ -817,6 +817,7 @@ function initMap() {
   };
   map = new kakao.maps.Map(container, options);
   geocoder = new kakao.maps.services.Geocoder();
+  setTimeout(() => map && map.relayout(), 500);
 
   // 두 손가락 회전
   let startAngle = null;
