@@ -1013,6 +1013,7 @@ function plotAllMarkers() {
   const total = data.length;
   
   data.forEach((item, idx) => {
+    if (item.done) return; // 완료된 건 핀 표시 안함
     if (item.lat && item.lng) {
       addMarker(item, idx);
       geocoded++;
