@@ -745,35 +745,47 @@ function applyTextDelete() {
   const text = document.getElementById('deletePinText').value.trim();
   if (!text) { showToast('번지를 입력해주세요'); return; }
 
-  const bunjiList = text.split('\n').map(l => l.trim()).filter(l => l);
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+  
+  // 번지별 입력 개수 카운트
+  const bunjiCount = {};
+  lines.forEach(line => {
+    const bunji = line.trim();
+    bunjiCount[bunji] = (bunjiCount[bunji] || 0) + 1;
+  });
+
   let count = 0;
 
-  bunjiList.forEach(bunji => {
-    let completed = 0;
-    for (let i = 0; i < data.length; i++) {
-      if ((data[i].bunji === bunji || data[i].addr.endsWith(bunji)) && !data[i].done) {
-        data[i].done = true;
-        updateMarker(i);
-        count++;
-        completed++;
-        break;
+  Object.entries(bunjiCount).forEach(([bunji, inputCount]) => {
+    // 해당 번지 찾기
+    const item = data.find(d => d.bunji === bunji || d.addr.endsWith(bunji));
+    if (!item) return;
+
+    // doneCount 증가
+    item.doneCount = (item.doneCount || 0) + inputCount;
+    count += inputCount;
+
+    // totalCount 전부 완료됐을 때만 핀 삭제
+    if (item.doneCount >= item.totalCount) {
+      item.done = true;
+      const idx = data.indexOf(item);
+      const m = markers.find(m => m.idx === idx);
+      if (m) {
+        m.overlay.setMap(null);
+        if (m.labelOverlay) m.labelOverlay.setMap(null);
+        markers = markers.filter(x => x.idx !== idx);
       }
-    }
-    // 전부 완료됐으면 핀 삭제
-    const allDone = data.filter(d => d.bunji === bunji || d.addr.endsWith(bunji)).every(d => d.done);
-    if (allDone) {
-      data.forEach((d, i) => {
-        if ((d.bunji === bunji || d.addr.endsWith(bunji)) && d.done) {
-          const m = markers.find(m => m.idx === i);
-          if (m) { m.overlay.setMap(null); if (m.labelOverlay) m.labelOverlay.setMap(null); markers = markers.filter(x => x.idx !== i); }
-        }
-      });
+      showToast(`🗑️ ${bunji} 전체 완료 → 핀 삭제!`);
+    } else {
+      // 아직 남은 개수 표시
+      const remaining = item.totalCount - item.doneCount;
+      showToast(`✅ ${bunji} ${inputCount}개 완료 (${remaining}개 남음)`);
     }
   });
 
   saveData();
   renderAll();
-  showToast(`✅ ${count}건 방문완료 처리됨`);
+  showToast(`✅ 총 ${count}건 방문완료 처리됨`);
   document.getElementById('deletePinText').value = '';
 }
 
