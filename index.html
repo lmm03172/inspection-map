@@ -964,12 +964,14 @@ function handleExcelUpload(input) {
       // D열이 "완료"면 제외
       if (cell3 === '완료') return;
 
-      // 같은 주소가 이미 있으면 인입주 번호만 추가
+      // 같은 주소가 이미 있으면 totalCount 증가
       const existing = parsed.find(p => p.addr === addr);
       if (existing) {
+        // 항상 totalCount 증가
+        existing.totalCount = (existing.totalCount || 1) + 1;
+        // 인입주 번호도 추가
         if (injuNo && !existing.injuList.includes(injuNo)) {
           existing.injuList.push(injuNo);
-          existing.totalCount = (existing.totalCount || 1) + 1;
         }
       } else {
         parsed.push({ 
