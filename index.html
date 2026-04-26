@@ -428,8 +428,11 @@
   <div class="tab" onclick="switchTab('list')">
     <span class="tab-icon">📋</span>목록
   </div>
-  <div class="tab" onclick="switchTab('photo')">
-    <span class="tab-icon">📸</span>사진삭제
+  <div class="tab" onclick="switchTab('addpin')">
+    <span class="tab-icon">📍</span>핀추가
+  </div>
+  <div class="tab" onclick="switchTab('deletepin')">
+    <span class="tab-icon">🗑️</span>핀삭제
   </div>
   <div class="tab" onclick="switchTab('upload')">
     <span class="tab-icon">📂</span>엑셀
@@ -481,62 +484,59 @@
     </div>
   </div>
 
-  <!-- Photo Delete Page -->
-  <div class="page" id="page-photo">
+  <!-- Pin Add Page -->
+  <div class="page" id="page-addpin">
     <div class="page-scroll">
-      <!-- 사진으로 핀 추가 -->
-      <div class="card">
-        <div class="card-title">📍 사진으로 핀 추가</div>
-        <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px; line-height:1.6;">주소가 보이는 사진을 올리면 AI가 주소를 읽어서 자동으로 핀을 찍어줍니다!</p>
 
-        <div class="card" style="background:var(--bg); padding:12px; margin-bottom:12px;">
-          <div style="font-size:12px; font-weight:700; margin-bottom:6px; color:var(--text-sub);">베이스 주소 (읍면동만 있을 경우)</div>
-          <div class="addr-display" id="photoAddBaseAddr">
+      <!-- 텍스트로 핀 추가 -->
+      <div class="card">
+        <div class="card-title">✏️ 주소 붙여넣기로 핀 추가</div>
+        <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px; line-height:1.6;">
+          Claude에게 사진을 올려서 받은 주소 목록을 아래에 붙여넣으세요.<br>
+          한 줄에 주소 하나씩 입력하면 돼요.
+        </p>
+        <textarea id="addPinText" style="width:100%; height:160px; border:1.5px solid var(--border); border-radius:10px; padding:10px; font-size:13px; font-family:inherit; resize:none; outline:none;" placeholder="예시)&#10;경상북도 상주시 공성면 금게리 47-7&#10;경상북도 상주시 외남면 흔평리 580&#10;공성면 옥산리 463-1"></textarea>
+
+        <div class="card" style="background:var(--bg); padding:12px; margin-top:10px; margin-bottom:10px;">
+          <div style="font-size:12px; font-weight:700; margin-bottom:4px; color:var(--text-sub);">읍면동만 있을 경우 베이스 주소</div>
+          <div class="addr-display" id="addPinBaseAddr">
             <span class="empty">엑셀 탭에서 베이스 주소 설정시 자동 적용</span>
           </div>
         </div>
-
-        <label for="photoAddInput">
-          <div class="upload-zone" id="photoAddZone">
-            <div class="upload-icon">🖼️</div>
-            <div class="upload-text">주소가 보이는 사진을<br><strong>터치해서 업로드</strong></div>
-          </div>
-        </label>
-        <input type="file" id="photoAddInput" accept="image/*" onchange="handlePhotoAdd(this)">
-        <div id="photoAddResult" style="display:none; margin-top:12px;"></div>
+        <button class="btn btn-primary" onclick="applyTextAdd()">📍 지도에 핀 추가</button>
+        <div id="addPinResult" style="margin-top:10px;"></div>
       </div>
 
-      <div class="card">
-        <div class="card-title">📸 사진으로 방문완료 처리</div>
-        <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px; line-height:1.6;">업무 앱 화면을 촬영한 사진을 업로드하면 AI가 번지를 읽어서 자동으로 방문완료 처리합니다.</p>
-        
-        <div class="card" style="background:var(--bg); padding:12px; margin-bottom:12px;">
-          <div style="font-size:12px; font-weight:700; margin-bottom:6px; color:var(--text-sub);">현재 베이스 주소</div>
-          <div class="addr-display" id="photoBaseAddr">
-            <span class="empty">엑셀 탭에서 베이스 주소를 먼저 설정해주세요</span>
-          </div>
-        </div>
-
-        <label for="photoInput">
-          <div class="upload-zone" id="photoZone">
-            <div class="upload-icon">📷</div>
-            <div class="upload-text">업무 앱 화면 사진을<br><strong>터치해서 업로드</strong></div>
-          </div>
-        </label>
-        <input type="file" id="photoInput" accept="image/*" onchange="handlePhotoUpload(this)">
-      </div>
-
-      <div id="photoResult" style="display:none;">
-        <div class="card">
-          <div class="card-title">🔍 AI 인식 결과</div>
-          <img id="previewImg" class="preview-img">
-          <div id="extractedContent"></div>
-        </div>
-      </div>
     </div>
   </div>
 
-  <!-- Upload Page -->
+  <!-- Pin Delete Page -->
+  <div class="page" id="page-deletepin">
+    <div class="page-scroll">
+
+      <!-- 텍스트로 핀 삭제 -->
+      <div class="card">
+        <div class="card-title">✏️ 번지 붙여넣기로 방문완료</div>
+        <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px; line-height:1.6;">
+          Claude에게 사진을 올려서 받은 번지 목록을 아래에 붙여넣으세요.<br>
+          한 줄에 번지 하나씩 입력하면 돼요.
+        </p>
+        <textarea id="deletePinText" style="width:100%; height:160px; border:1.5px solid var(--border); border-radius:10px; padding:10px; font-size:13px; font-family:inherit; resize:none; outline:none;" placeholder="예시)&#10;47-7&#10;580&#10;528-6&#10;463-1"></textarea>
+
+        <div class="card" style="background:var(--bg); padding:12px; margin-top:10px; margin-bottom:10px;">
+          <div style="font-size:12px; font-weight:700; margin-bottom:4px; color:var(--text-sub);">현재 베이스 주소</div>
+          <div class="addr-display" id="deletePinBaseAddr">
+            <span class="empty">엑셀 탭에서 베이스 주소를 설정해주세요</span>
+          </div>
+        </div>
+        <button class="btn btn-danger" onclick="applyTextDelete()">🗑️ 방문완료 처리</button>
+        <div id="deletePinResult" style="margin-top:10px;"></div>
+      </div>
+
+    </div>
+  </div>
+
+    <!-- Upload Page -->
   <div class="page" id="page-upload">
     <div class="page-scroll">
       
@@ -691,6 +691,87 @@ function searchAddress() {
   });
 }
 
+// 텍스트로 핀 추가
+async function applyTextAdd() {
+  const text = document.getElementById('addPinText').value.trim();
+  if (!text) { showToast('주소를 입력해주세요'); return; }
+
+  const lines = text.split('
+').map(l => l.trim()).filter(l => l);
+  const addrs = lines.map(line => {
+    const isFullAddr = line.includes('도') || line.includes('시') || line.includes('군');
+    if (isFullAddr) return line;
+    return baseAddr ? `${baseAddr} ${line}` : line;
+  });
+
+  showToast(`📍 ${addrs.length}개 주소 추가 중...`);
+  switchTab('map');
+
+  let count = 0;
+  for (let i = 0; i < addrs.length; i++) {
+    const addr = addrs[i];
+    await new Promise(resolve => {
+      setTimeout(() => {
+        geocoder.addressSearch(addr, (result, status) => {
+          if (status === kakao.maps.services.Status.OK) {
+            const lat = parseFloat(result[0].y);
+            const lng = parseFloat(result[0].x);
+            const parts = addr.split(' ');
+            const bunji = parts[parts.length - 1];
+            const newItem = { name: '', bunji, addr, injuNo: '', injuList: [], totalCount: 1, doneCount: 0, done: false, lat, lng };
+            data.push(newItem);
+            saveData();
+            addMarker(newItem, data.length - 1);
+            updateStat();
+            count++;
+          }
+          resolve();
+        });
+      }, i * 200);
+    });
+  }
+  renderAll();
+  showToast(`✅ ${count}개 핀 추가 완료!`);
+}
+
+// 텍스트로 방문완료 처리
+function applyTextDelete() {
+  const text = document.getElementById('deletePinText').value.trim();
+  if (!text) { showToast('번지를 입력해주세요'); return; }
+
+  const bunjiList = text.split('
+').map(l => l.trim()).filter(l => l);
+  let count = 0;
+
+  bunjiList.forEach(bunji => {
+    let completed = 0;
+    for (let i = 0; i < data.length; i++) {
+      if ((data[i].bunji === bunji || data[i].addr.endsWith(bunji)) && !data[i].done) {
+        data[i].done = true;
+        updateMarker(i);
+        count++;
+        completed++;
+        break;
+      }
+    }
+    // 전부 완료됐으면 핀 삭제
+    const allDone = data.filter(d => d.bunji === bunji || d.addr.endsWith(bunji)).every(d => d.done);
+    if (allDone) {
+      data.forEach((d, i) => {
+        if ((d.bunji === bunji || d.addr.endsWith(bunji)) && d.done) {
+          const m = markers.find(m => m.idx === i);
+          if (m) { m.overlay.setMap(null); if (m.labelOverlay) m.labelOverlay.setMap(null); markers = markers.filter(x => x.idx !== i); }
+        }
+      });
+    }
+  });
+
+  saveData();
+  renderAll();
+  showToast(`✅ ${count}건 방문완료 처리됨`);
+  document.getElementById('deletePinText').value = '';
+}
+
 function openElecMap(injuNo) {
   navigator.clipboard.writeText(injuNo).then(() => {
     showToast(`⚡ ${injuNo} 복사됨! ElecMap에 붙여넣기 하세요`);
@@ -772,7 +853,7 @@ function initMap() {
 // ===== TAB =====
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach((t, i) => {
-    const tabs = ['map','list','photo','upload'];
+    const tabs = ['map','list','addpin','deletepin','upload'];
     t.classList.toggle('active', tabs[i] === tab);
   });
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -780,7 +861,14 @@ function switchTab(tab) {
   
   if (tab === 'map') { setTimeout(() => map && map.relayout(), 100); }
   if (tab === 'list') renderList();
-  if (tab === 'photo') updatePhotoBaseAddr();
+  if (tab === 'addpin') {
+    const el = document.getElementById('addPinBaseAddr');
+    if (el) el.innerHTML = baseAddr ? `<strong>${baseAddr}</strong>` : '<span class="empty">엑셀 탭에서 베이스 주소 설정시 자동 적용</span>';
+  }
+  if (tab === 'deletepin') {
+    const el = document.getElementById('deletePinBaseAddr');
+    if (el) el.innerHTML = baseAddr ? `<strong>${baseAddr}</strong>` : '<span class="empty">엑셀 탭에서 베이스 주소를 설정해주세요</span>';
+  }
 }
 
 // ===== BASE ADDRESS =====
