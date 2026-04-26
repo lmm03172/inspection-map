@@ -576,6 +576,13 @@
         <div id="failedListBox" style="display:none;"></div>
       </div>
 
+      <!-- 백업 -->
+      <div class="card">
+        <div class="card-title">💾 데이터 백업</div>
+        <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px; line-height:1.6;">현재 지도 데이터를 엑셀로 저장해요.<br>다음날 이 파일을 다시 업로드하면 이어서 작업할 수 있어요!</p>
+        <button class="btn btn-primary" onclick="backupToExcel()">💾 엑셀로 백업하기</button>
+      </div>
+
       <!-- Reset -->
       <div class="card">
         <div class="card-title">🔄 초기화</div>
@@ -922,8 +929,9 @@ function handleExcelUpload(input) {
 
       let injuNo = '';
 
+      const cell3 = String(row[3] || '').trim();
+
       if (isFullAddr) {
-        // A열 전체주소, C열 인입주번호
         addr = cell0;
         const parts = cell0.split(' ');
         bunji = parts[parts.length - 1];
@@ -940,6 +948,9 @@ function handleExcelUpload(input) {
       }
 
       if (!bunji) return;
+
+      // D열이 "완료"면 제외
+      if (cell3 === '완료') return;
 
       // 같은 주소가 이미 있으면 인입주 번호만 추가
       const existing = parsed.find(p => p.addr === addr);
@@ -1561,6 +1572,37 @@ function resetAll() {
 }
 
 // ===== UTILS =====
+function backupToExcel() {
+  if (data.length === 0) { showToast('백업할 데이터가 없어요'); return; }
+
+  const wb = XLSX.utils.book_new();
+  const rows = [['주소', '', '인입주번호', '완료여부']];
+  
+  data.forEach(item => {
+    // 인입주가 여러개면 각각 한 행씩
+    if (item.injuList && item.injuList.length > 1) {
+      item.injuList.forEach(iju => {
+        rows.push([item.addr, '', iju, item.done ? '완료' : '미완료']);
+      });
+    } else {
+      rows.push([
+        item.addr,
+        '',
+        item.injuList && item.injuList.length > 0 ? item.injuList[0] : (item.injuNo || ''),
+        item.done ? '완료' : '미완료'
+      ]);
+    }
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, '점검지도백업');
+  
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `점검지도_백업_${dateStr}.xlsx`);
+  showToast('💾 백업 완료! 파일을 저장해주세요');
+}
+
 function saveData() { localStorage.setItem('jd_data', JSON.stringify(data)); }
 
 function showToast(msg) {
