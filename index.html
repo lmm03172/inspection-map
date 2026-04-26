@@ -917,7 +917,7 @@ function handleExcelUpload(input) {
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
     
     const parsed = [];
-    rows.forEach(row => {
+    rows.forEach((row, rowIdx) => {
       if (!row || row.length === 0) return;
       let name = '', bunji = '', addr = '';
 
@@ -1576,7 +1576,7 @@ function backupToExcel() {
   if (data.length === 0) { showToast('백업할 데이터가 없어요'); return; }
 
   const wb = XLSX.utils.book_new();
-  const rows = [['주소', '', '인입주번호', '완료여부']];
+  const rows = [];
   
   data.forEach(item => {
     // 인입주가 여러개면 각각 한 행씩
